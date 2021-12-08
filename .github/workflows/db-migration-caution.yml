@@ -27,9 +27,15 @@ jobs:
 
       # 上記のファイルを対象にgrep
       - name: Grep something
+        id: grep-something
         run: |
           echo ${{steps.filter-migration.outputs.sqls_files}}
-          grep -i "drop" ${{steps.filter-migration.outputs.sqls_files}}
+          drop_sqls=$(grep -il "drop" ${{steps.filter-migration.outputs.sqls_files}} || true)
+          drop_sqls="${drop_sqls//$'\n'/\\n}"
+          echo "::set-output drop_sqls::$drop_sqls"
+      
+      - run: echo ${{ steps.grep-something.drop_sqls }}
+
 
       # コメントがすでに存在しないか確認し
       # - name: Check existing caution comment
