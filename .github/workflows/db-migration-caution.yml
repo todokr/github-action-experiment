@@ -20,11 +20,7 @@ jobs:
           filters: |
             sqls:
               - '**/migration/*.sql'
-      - name: debug
-        run: |
-          pwd
-          ls -la
-
+      
       # 上記のファイルを対象にgrep
       - name: Grep something
         id: grep-something
