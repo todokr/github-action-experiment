@@ -31,7 +31,7 @@ jobs:
           echo "::set-output name=drop-sqls::$drop_sqls"
       
       - name: Debug
-        run: echo ${{ steps.grep-something.drop-sqls }}
+        run: echo ${{ steps.grep-something.outputs.drop-sqls }}
 
 
       # コメントがすでに存在しないか確認し
