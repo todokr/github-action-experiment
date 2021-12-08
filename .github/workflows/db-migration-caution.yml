@@ -9,6 +9,8 @@ jobs:
   commenter:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
+      
       # migration に変更が加えられた際に
       - name: Detect migration
         uses: dorny/paths-filter@v2
@@ -19,17 +21,16 @@ jobs:
             sqls:
               - '**/migration/*.sql'
       - name: debug
-        uses: actions/checkout@v2
         run: |
           pwd
           ls -la
 
       # 上記のファイルを対象にgrep
-      # - name: Grep something
-      #   uses: actions/checkout@v2
-      #   run: |
-      #     echo ${{steps.filter-migration.outputs.sqls_files}}
-      #     grep -i "drop" ${{steps.filter-migration.outputs.sqls_files}}
+      - name: Grep something
+        uses: actions/checkout@v2
+        run: |
+          echo ${{steps.filter-migration.outputs.sqls_files}}
+          grep -i "drop" ${{steps.filter-migration.outputs.sqls_files}}
 
       # コメントがすでに存在しないか確認し
       # - name: Check existing caution comment
