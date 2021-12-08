@@ -1,0 +1,1 @@
+create table test(varchar id not null);
