@@ -19,10 +19,11 @@ jobs:
             sqls:
               - '**/migration/*.sql'
       - name: debug
+        uses: actions/checkout@v2
         run: |
           pwd
           ls -la
-      
+
       # 上記のファイルを対象にgrep
       # - name: Grep something
       #   uses: actions/checkout@v2
