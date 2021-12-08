@@ -27,9 +27,8 @@ jobs:
         run: |
           echo ${{steps.filter-migration.outputs.sqls_files}}
           drop_sqls=$(grep -il "drop" ${{steps.filter-migration.outputs.sqls_files}} || true)
-          drop_sqls="${drop_sqls//$'\n'/\\n}"
           echo "::set-output name=drop-sqls::$drop_sqls"
-      
+
       - name: Debug
         run: echo ${{ steps.grep-something.outputs.drop-sqls }}
 
