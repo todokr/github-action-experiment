@@ -27,7 +27,6 @@ jobs:
 
       # 上記のファイルを対象にgrep
       - name: Grep something
-        uses: actions/checkout@v2
         run: |
           echo ${{steps.filter-migration.outputs.sqls_files}}
           grep -i "drop" ${{steps.filter-migration.outputs.sqls_files}}
