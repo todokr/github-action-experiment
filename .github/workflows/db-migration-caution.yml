@@ -30,8 +30,7 @@ jobs:
         id: grep-something
         run: |
           echo ${{steps.filter-migration.outputs.sqls_files}}
-          drop_sqls=$(grep -il "drop" ${{steps.filter-migration.outputs.sqls_files}} || true)
-          echo $drop_sqls
+          grep -il "drop" ${{steps.filter-migration.outputs.sqls_files}} || true
 
       # コメントがすでに存在しないか確認し
       # - name: Check existing caution comment
