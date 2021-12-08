@@ -20,13 +20,19 @@ jobs:
           filters: |
             sqls:
               - '**/migration/*.sql'
-      
+
       # 上記のファイルを対象にgrep
       - name: Grep something
         id: grep-something
         run: |
           echo ${{steps.filter-migration.outputs.sqls_files}}
-          grep -il "drop" ${{steps.filter-migration.outputs.sqls_files}} || true
+          drop_sqls=$(grep -il "drop" ${{steps.filter-migration.outputs.sqls_files}} || true)
+          drop_sqls="${drop_sqls//$'\n'/\\n}"
+          echo "::set-output name=drop-sqls::$drop_sqls"
+      
+      - name: Debug
+        run: echo ${{ steps.grep-something.drop-sqls }}
+
 
       # コメントがすでに存在しないか確認し
       # - name: Check existing caution comment
