@@ -14,9 +14,17 @@ jobs:
         uses: dorny/paths-filter@v2
         id: filter-migration
         with:
+          list-files: shell
           filters: |
             sqls:
               - '**/migration/*.sql'
+      
+      # 上記のファイルを対象にgrep
+      - name: Grep something
+        run: |
+          echo ${{steps.filter-migration.outputs.sqls_files}}
+          grep -i "drop" ${{steps.filter-migration.outputs.sqls_files}}
+
       # コメントがすでに存在しないか確認し
       - name: Check existing caution comment
         uses: peter-evans/find-comment@v1
