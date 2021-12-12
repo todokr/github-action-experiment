@@ -15,21 +15,29 @@ jobs:
       - name: Grep Suspicious SQL
         id: grep-suspicious
         run: |
-          suspicious_keywords=("drop unko" "drop hoge")
+          suspicious_keywords=("drop table" "drop column")
           pattern=$(IFS="|"; echo "${suspicious_keywords[*]}")
           migration_dir="./migration"
-          suspicious_sqls=$(find ${migration_dir}/*.sql | xargs grep -li -E "${pattern}" || echo 'NOT_DETECTED')
+          suspicious_sqls=$(find ${migration_dir}/*.sql | xargs grep -li -E "${pattern}" || echo 'SUSPICIOUS_SQL_NOT_DETECTED')
           suspicious_sqls="${suspicious_sqls//$'\n'/,}"
-          echo $suspicious_sqls
           echo "::set-output name=suspicious-sqls::$suspicious_sqls"
 
       - name: Debug2
-        if: steps.grep-suspicious.outputs.suspicious-sqls != 'NOT_DETECTED'
+        if: steps.grep-suspicious.outputs.suspicious-sqls != 'SUSPICIOUS_SQL_NOT_DETECTED'
         run: echo ${{ steps.grep-suspicious.outputs.suspicious-sqls }}
 
       - name: Debug3
-        if: steps.grep-suspicious.outputs.suspicious-sqls == 'NOT_DETECTED'
+        if: steps.grep-suspicious.outputs.suspicious-sqls == 'SUSPICIOUS_SQL_NOT_DETECTED'
         run: echo "not detected"
+
+      - name: Detect Change in Auto Generated File
+        id: detect-change-auto-generated-file
+        uses: dorny/paths-filter@v2
+        with:
+          list-files: 'shell'
+          filters: |
+            model:
+              - '**/model/*.scala'
 
       # コメントがすでに存在しないか確認し
       # - name: Check existing caution comment
@@ -43,9 +51,12 @@ jobs:
       # コメントを追記
       - name: Write DB migration caution comment
         uses: peter-evans/create-or-update-comment@v1
-        if: steps.filter-migration.outputs.sqls == 'true' &&
-            steps.check-migration-comment.outputs.comment-id == ''
+        if: steps.grep-suspicious.outputs.suspicious-sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
+            steps.detect-change-auto-generated-file.outputs.model == 'true'
+            # steps.check-migration-comment.outputs.comment-id == ''
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
             Contains db migration!
+            SQLs: ${{ steps.grep-suspicious.outputs.suspicious-sqls }}
+            Auto Generated Files: ${{ steps.detect-change-auto-generated-file.outputs.model_files }}
