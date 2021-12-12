@@ -15,7 +15,7 @@ jobs:
       - name: Grep Suspicious SQL
         id: grep-suspicious
         run: |
-          suspicious_keywords=("drop table" "drop column")
+          suspicious_keywords=("drop unko" "drop hoge")
           pattern=$(IFS="|"; echo "${suspicious_keywords[*]}")
           migration_dir="./migration"
           suspicious_sqls=$(find ${migration_dir}/*.sql | xargs grep -li -E "${pattern}" || echo 'NOT_DETECTED')
