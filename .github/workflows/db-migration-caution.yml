@@ -11,30 +11,25 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # migration に変更が加えられた際に
-      - name: Detect migration
-        uses: dorny/paths-filter@v2
-        id: filter-migration
-        with:
-          list-files: shell
-          filters: |
-            sqls:
-              - '**/migration/*.sql'
-
-      # 上記のファイルを対象にgrep
-      - name: Grep something
+      # migration SQLを対象にキーワードでgrep
+      - name: Grep Suspicious SQL
         id: grep-suspicious
         run: |
           suspicious_keywords=("drop table" "drop column")
           pattern=$(IFS="|"; echo "${suspicious_keywords[*]}")
           migration_dir="./migration"
-          suspicious_sqls=$(find ${migration_dir}/*.sql | xargs grep -li -E "${pattern}" || true)
-          suspicious_sqls="${suspicious_sqls//$'\n'/\\n}"
+          suspicious_sqls=$(find ${migration_dir}/*.sql | xargs grep -li -E "${pattern}" || echo 'NOT_DETECTED')
+          suspicious_sqls="${suspicious_sqls//$'\n'/,}"
           echo $suspicious_sqls
           echo "::set-output name=suspicious-sqls::$suspicious_sqls"
 
       - name: Debug2
+        if: steps.grep-suspicious.outputs.suspicious-sqls != 'NOT_DETECTED'
         run: echo ${{ steps.grep-suspicious.outputs.suspicious-sqls }}
+
+      - name: Debug3
+        if: steps.grep-suspicious.outputs.suspicious-sqls == 'NOT_DETECTED'
+        run: echo "not detected"
 
       # コメントがすでに存在しないか確認し
       # - name: Check existing caution comment
