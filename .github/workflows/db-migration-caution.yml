@@ -29,6 +29,7 @@ jobs:
           pattern=$(IFS="|"; echo "${suspicious_keywords[*]}")
           migration_dir="./migration"
           suspicious_sqls=$(find ${migration_dir}/*.sql | xargs grep -li -E "${pattern}" || true)
+          suspicious_sqls="${suspicious_sqls//$'\n'/\\n}"
           echo $suspicious_sqls
           echo "::set-output name=suspicious-sqls::$suspicious_sqls"
 
