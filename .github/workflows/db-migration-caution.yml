@@ -19,17 +19,10 @@ jobs:
           pattern=$(IFS="|"; echo "${suspicious_keywords[*]}")
           migration_dir="./migration"
           suspicious_sqls=$(find ${migration_dir}/*.sql | xargs grep -li -E "${pattern}" || echo 'SUSPICIOUS_SQL_NOT_DETECTED')
-          suspicious_sqls="${suspicious_sqls//$'\n'/,}"
+          suspicious_sqls="${suspicious_sqls//$'\n'/- \\n}"
           echo "::set-output name=suspicious-sqls::$suspicious_sqls"
 
-      - name: Debug2
-        if: steps.grep-suspicious.outputs.suspicious-sqls != 'SUSPICIOUS_SQL_NOT_DETECTED'
-        run: echo ${{ steps.grep-suspicious.outputs.suspicious-sqls }}
-
-      - name: Debug3
-        if: steps.grep-suspicious.outputs.suspicious-sqls == 'SUSPICIOUS_SQL_NOT_DETECTED'
-        run: echo "not detected"
-
+      # 自動生成コードの削除or変更を検知
       - name: Detect Change in Auto Generated File
         id: detect-change-auto-generated-file
         uses: dorny/paths-filter@v2
@@ -37,7 +30,7 @@ jobs:
           list-files: 'csv'
           filters: |
             model:
-              - '**/model/*.scala'
+              - deleted|modified: '**/model/*.scala'
 
       # コメントがすでに存在しないか確認し
       # - name: Check existing caution comment
@@ -58,5 +51,8 @@ jobs:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
             Contains db migration!
-            SQLs: ${{ steps.grep-suspicious.outputs.suspicious-sqls }}
-            Auto Generated Files: ${{ steps.detect-change-auto-generated-file.outputs.model_files }}
+            ### SQLs
+            ${{ steps.grep-suspicious.outputs.suspicious-sqls }}
+
+            ### Auto Generated Files
+            ${{ steps.detect-change-auto-generated-file.outputs.model_files }}
