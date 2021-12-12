@@ -44,7 +44,8 @@ jobs:
         if: steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
             steps.detect-change-auto-generated-file.outputs.model == 'true'
         run: |
-          md5=(`echo -n "${{steps.grep-suspicious.outputs.sqls}}${{steps.detect-change-auto-generated-file.outputs.model_files}}" | md5sum`)
+          md5=$(echo -n "${{steps.grep-suspicious.outputs.sqls}}${{steps.detect-change-auto-generated-file.outputs.model_files}}" | md5sum)
+          echo $md5
           echo "::set-output name=md5::$md5"
 
       # ファイルに変更がないかをコメント内のMD5の値から確認
@@ -52,9 +53,9 @@ jobs:
         uses: peter-evans/find-comment@v1
         id: check-md5
         with:
-          issue-number: ${{ github.event.pull_request.number }}
+          issue-number: ${{github.event.pull_request.number}}
           comment-author: 'github-actions[bot]'
-          body-includes: ${{steps.calc-md5.output.md5}}
+          body-includes: ${{steps.calc-md5.outputs.md5}}
 
       # 変更ファイルの情報をmarkdown用にフォーマット
       - name: Format Comment Body
@@ -80,7 +81,7 @@ jobs:
           body: |
             ## Caution!
             DB migration & change of auto-generated model is detected in this one PR.
-            <small>${{steps.calc-md5.output.md5}}</small>
+            <small>${{steps.calc-md5.outputs.md5}}</small>
 
             ### SQLs
             ${{steps.format-body.outputs.suspicious-sql-list}}
