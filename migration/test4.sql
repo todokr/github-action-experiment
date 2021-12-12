@@ -1,0 +1,1 @@
+alter table test3 drop column age;
