@@ -11,17 +11,30 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      # 自動生成されたModelファイルの削除or変更を検知
+      # output: model 削除or変更が検知された際に 'true'
+      # output: model_files 削除or変更された自動生成ファイルパスのカンマ区切り文字列
+      - name: Detect DB migration
+        id: detect-db-migration
+        uses: dorny/paths-filter@v2
+        with:
+          list-files: 'shell'
+          filters: |
+            sql:
+              - 'migration/*.sql'
+
       # migration SQLを対象にキーワードでgrep
       # output: sqls
       # - ヒットした場合はSQLファイルパスのカンマ区切り文字列
       # - 1件もヒットしない場合は 'SUSPICIOUS_SQL_NOT_DETECTED' の文字列
       - name: Grep Suspicious SQL
         id: grep-suspicious
+        if: steps.detect-db-migration.outputs.sql == 'true'
         run: |
           suspicious_keywords=("drop table" "drop column")
           pattern=$(IFS="|"; echo "${suspicious_keywords[*]}")
-          migration_dir="./migration"
-          suspicious_sqls=$(find ${migration_dir}/*.sql | xargs grep -li -E "${pattern}" || echo 'SUSPICIOUS_SQL_NOT_DETECTED')
+          echo ${{steps.detect-db-migration.outputs.sql_files}}
+          suspicious_sqls=$(grep -li -E "${pattern}" ${{steps.detect-db-migration.outputs.sql_files}} || echo 'SUSPICIOUS_SQL_NOT_DETECTED')
           suspicious_sqls="${suspicious_sqls//$'\n'/,}"
           suspicious_sqls="${suspicious_sqls//\.\//}"
           echo "::set-output name=sqls::$suspicious_sqls"
@@ -41,7 +54,8 @@ jobs:
       # コメントを再度行うかを判断するために、変更ファイルの一覧からmd5を計算
       - name: Calc MD5
         id: calc-md5
-        if: steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
+        if: steps.detect-db-migration.outputs.sql == 'true' &&
+            steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
             steps.detect-model-change.outputs.model == 'true'
         run: |
           md5=(`echo -n "${{steps.grep-suspicious.outputs.sqls}}${{steps.detect-model-change.outputs.model_files}}" | md5sum`)
@@ -52,6 +66,9 @@ jobs:
       - name: Check MD5
         id: check-md5
         uses: peter-evans/find-comment@v1
+        if: steps.detect-db-migration.outputs.sql == 'true' &&
+            steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
+            steps.detect-model-change.outputs.model == 'true'
         with:
           issue-number: ${{github.event.pull_request.number}}
           comment-author: 'github-actions[bot]'
@@ -63,7 +80,8 @@ jobs:
       # output: changed-model-list markdownにフォーマットした自動生成モデルファイルパス一覧
       - name: Format Comment Body
         id: format-body
-        if: steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
+        if: steps.detect-db-migration.outputs.sql == 'true' &&
+            steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
             steps.detect-model-change.outputs.model == 'true'
         run: |
           suspicious_sqls=${{steps.grep-suspicious.outputs.sqls}}
@@ -76,18 +94,20 @@ jobs:
       # コメントを追記
       - name: Write caution comment
         uses: peter-evans/create-or-update-comment@v1
-        if: steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
-            steps.detect-model-change.outputs.model == 'true'&&
+        if: steps.detect-db-migration.outputs.sql == 'true' &&
+            steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
+            steps.detect-model-change.outputs.model == 'true' &&
             steps.check-md5.outputs.comment-id == ''
         with:
           issue-number: ${{github.event.pull_request.number}}
           body: |
             ## Caution!
             DB migration & change of auto-generated model is detected in this one PR.
-            <small>${{steps.calc-md5.outputs.md5}}</small>
 
             ### SQLs
             ${{steps.format-body.outputs.suspicious-sql-list}}
 
             ### Auto Generated Files
             ${{steps.format-body.outputs.changed-model-list}}
+
+            > ${{steps.calc-md5.outputs.md5}}

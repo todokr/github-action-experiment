@@ -1,1 +1,1 @@
-case class Company(id: String, name: String)
+case class Company(id: String, name: String, contact: String)
