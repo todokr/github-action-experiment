@@ -28,9 +28,9 @@ jobs:
       - name: Grep something
         id: grep-something
         run: |
-          echo ${{steps.filter-migration.outputs.sqls_files}}
-          drop_sqls=$(grep -il "drop" ${{steps.filter-migration.outputs.sqls_files}} || true)
-          drop_sqls="${drop_sqls//$'\n'/, }"
+          suspicious_keywords=('drop table' 'drop column')
+          migration_dir="./migration"
+          drop_sqls=$(find ${migration_dir}/*.sql | xargs grep -li "${suspicious_keywords[@]/#/-e }" || true)
           echo "::set-output name=drop-sqls::$drop_sqls"
       
       - name: Debug2
