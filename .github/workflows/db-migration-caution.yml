@@ -96,17 +96,18 @@ jobs:
         uses: peter-evans/create-or-update-comment@v1
         if: steps.detect-db-migration.outputs.sql == 'true' &&
             steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
-            steps.detect-model-change.outputs.model == 'true'&&
+            steps.detect-model-change.outputs.model == 'true' &&
             steps.check-md5.outputs.comment-id == ''
         with:
           issue-number: ${{github.event.pull_request.number}}
           body: |
             ## Caution!
             DB migration & change of auto-generated model is detected in this one PR.
-            <small>${{steps.calc-md5.outputs.md5}}</small>
 
             ### SQLs
             ${{steps.format-body.outputs.suspicious-sql-list}}
 
             ### Auto Generated Files
             ${{steps.format-body.outputs.changed-model-list}}
+
+            > ${{steps.calc-md5.outputs.md5}}
