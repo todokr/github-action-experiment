@@ -26,7 +26,9 @@ jobs:
           suspicious_sqls="${suspicious_sqls//\.\//}"
           echo "::set-output name=sqls::$suspicious_sqls"
 
-      # 自動生成コードの削除or変更を検知
+      # 自動生成ファイルの削除or変更を検知
+      # output: model 削除or変更が検知された際に 'true'
+      # output: model_files 削除or変更された自動生成ファイルパスのカンマ区切り文字列
       - name: Detect Change in Auto Generated File
         id: detect-change-auto-generated-file
         uses: dorny/paths-filter@v2
@@ -36,35 +38,34 @@ jobs:
             model:
               - deleted|modified: '**/model/*.scala'
 
-      # コメントがすでに存在しないか確認し
-      # - name: Check existing caution comment
-      #   uses: peter-evans/find-comment@v1
-      #   id: check-migration-comment
-      #   with:
-      #     issue-number: ${{ github.event.pull_request.number }}
-      #     comment-author: 'github-actions[bot]'
-      #     body-includes: Contains db migration!
-
       # コメントを再度行うかを判断するために、変更ファイルの一覧からmd5を計算
       - name: Calc MD5
         id: calc-md5
         if: steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
             steps.detect-change-auto-generated-file.outputs.model == 'true'
         run: |
-          md5=$(echo -n "${{steps.grep-suspicious.outputs.sqls}}${{steps.detect-change-auto-generated-file.outputs.model_files}}" | md5sum)
-          echo $md5
+          md5=(`echo -n "${{steps.grep-suspicious.outputs.sqls}}${{steps.detect-change-auto-generated-file.outputs.model_files}}" | md5sum`)
           echo "::set-output name=md5::$md5"
 
-      # markdown用にフォーマット
+      # ファイルに変更がないかをコメント内のMD5の値から確認
+      - name: Check MD5
+        uses: peter-evans/find-comment@v1
+        id: check-md5
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: ${{steps.calc-md5.output.md5}}
+
+      # 変更ファイルの情報をmarkdown用にフォーマット
       - name: Format Comment Body
         id: format-body
         if: steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
             steps.detect-change-auto-generated-file.outputs.model == 'true'
         run: |
-          suspicious_sqls=${{ steps.grep-suspicious.outputs.sqls }}
+          suspicious_sqls=${{steps.grep-suspicious.outputs.sqls}}
           suspicious_sql_list="- ${suspicious_sqls//','/'%0A- '}"
           echo "::set-output name=suspicious-sql-list::$suspicious_sql_list"
-          model_files=${{ steps.detect-change-auto-generated-file.outputs.model_files }}
+          model_files=${{steps.detect-change-auto-generated-file.outputs.model_files}}
           model_file_list="- ${model_files//','/'%0A- '}"
           echo "::set-output name=changed-model-list::$model_file_list"
 
@@ -73,13 +74,16 @@ jobs:
         uses: peter-evans/create-or-update-comment@v1
         if: steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
             steps.detect-change-auto-generated-file.outputs.model == 'true'
-            # steps.check-migration-comment.outputs.comment-id == ''
+            # && steps.check-md5.outputs.comment-id == ''
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            Contains db migration!
+            ## Caution!
+            DB migration & change of auto-generated model is detected in this one PR.
+            <small>${{steps.calc-md5.output.md5}}</small>
+
             ### SQLs
-            ${{ steps.format-body.outputs.suspicious-sql-list }}
+            ${{steps.format-body.outputs.suspicious-sql-list}}
 
             ### Auto Generated Files
-            ${{ steps.format-body.outputs.changed-model-list }}
+            ${{steps.format-body.outputs.changed-model-list}}
