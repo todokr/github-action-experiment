@@ -12,6 +12,9 @@ jobs:
       - uses: actions/checkout@v2
 
       # migration SQLを対象にキーワードでgrep
+      # output: sqls
+      # - ヒットした場合はSQLファイルのカンマ区切り文字列
+      # - 1件もヒットしない場合は 'SUSPICIOUS_SQL_NOT_DETECTED' の文字列
       - name: Grep Suspicious SQL
         id: grep-suspicious
         run: |
@@ -20,7 +23,7 @@ jobs:
           migration_dir="./migration"
           suspicious_sqls=$(find ${migration_dir}/*.sql | xargs grep -li -E "${pattern}" || echo 'SUSPICIOUS_SQL_NOT_DETECTED')
           suspicious_sqls="${suspicious_sqls//$'\n'/,}"
-          echo "::set-output name=suspicious-sqls::$suspicious_sqls"
+          echo "::set-output name=sqls::$suspicious_sqls"
 
       # 自動生成コードの削除or変更を検知
       - name: Detect Change in Auto Generated File
@@ -41,19 +44,23 @@ jobs:
       #     comment-author: 'github-actions[bot]'
       #     body-includes: Contains db migration!
 
+      # markdown用にフォーマット
       - name: Format Comment Body
         id: format-body
-        if: steps.grep-suspicious.outputs.suspicious-sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
+        if: steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
             steps.detect-change-auto-generated-file.outputs.model == 'true'
         run: |
-          suspicious_sqls=${{ steps.grep-suspicious.outputs.suspicious-sqls }}
+          suspicious_sqls=${{ steps.grep-suspicious.outputs.sqls }}
           suspicious_sql_list="- ${suspicious_sqls//','/'%0A- '}"
-          echo "::set-output name=suspicious-sqls-list::$suspicious_sql_list"
+          echo "::set-output name=suspicious-sql-list::$suspicious_sql_list"
+          model_files=${{ steps.detect-change-auto-generated-file.outputs.model_files }}
+          model_file_list="- ${model_files//','/'%0A- '}"
+          echo "::set-output name=changed-model-list::$model_file_list"
 
       # コメントを追記
       - name: Write DB migration caution comment
         uses: peter-evans/create-or-update-comment@v1
-        if: steps.grep-suspicious.outputs.suspicious-sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
+        if: steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
             steps.detect-change-auto-generated-file.outputs.model == 'true'
             # steps.check-migration-comment.outputs.comment-id == ''
         with:
@@ -61,7 +68,7 @@ jobs:
           body: |
             Contains db migration!
             ### SQLs
-            ${{ steps.format-body.outputs.suspicious-sqls-list }}
+            ${{ steps.format-body.outputs.suspicious-sql-list }}
 
             ### Auto Generated Files
-            ${{ steps.detect-change-auto-generated-file.outputs.model_files }}
+            ${{ steps.format-body.outputs.changed-model-list }}
