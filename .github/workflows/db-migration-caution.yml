@@ -44,7 +44,7 @@ jobs:
         if: steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
             steps.detect-change-auto-generated-file.outputs.model == 'true'
         run: |
-          md5=$(echo -n "${{steps.grep-suspicious.outputs.sqls}}${{steps.detect-change-auto-generated-file.outputs.model_files}}" | md5sum)
+          md5=(`echo -n "${{steps.grep-suspicious.outputs.sqls}}${{steps.detect-change-auto-generated-file.outputs.model_files}}" | md5sum`)
           echo $md5
           echo "::set-output name=md5::$md5"
 
