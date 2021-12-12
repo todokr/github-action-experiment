@@ -11,6 +11,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       
+      - name: Debug2
+        run: ls -la
+      
       # migration に変更が加えられた際に
       - name: Detect migration
         uses: dorny/paths-filter@v2
@@ -27,9 +30,10 @@ jobs:
         run: |
           echo ${{steps.filter-migration.outputs.sqls_files}}
           drop_sqls=$(grep -il "drop" ${{steps.filter-migration.outputs.sqls_files}} || true)
+          drop_sqls="${drop_sqls//$'\n'/, }"
           echo "::set-output name=drop-sqls::$drop_sqls"
-
-      - name: Debug
+      
+      - name: Debug2
         run: echo ${{ steps.grep-something.outputs.drop-sqls }}
 
 
