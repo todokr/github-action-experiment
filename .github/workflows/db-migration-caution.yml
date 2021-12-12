@@ -33,8 +33,8 @@ jobs:
         run: |
           suspicious_keywords=("drop table" "drop column")
           pattern=$(IFS="|"; echo "${suspicious_keywords[*]}")
-          echo ${{steps.detect-db-migration.ouputs.sql_files}}
-          suspicious_sqls=$(grep -li -E "${pattern}" ${{steps.detect-db-migration.ouputs.sql_files}} || echo 'SUSPICIOUS_SQL_NOT_DETECTED')
+          echo ${{steps.detect-db-migration.outputs.sql_files}}
+          suspicious_sqls=$(grep -li -E "${pattern}" ${{steps.detect-db-migration.outputs.sql_files}} || echo 'SUSPICIOUS_SQL_NOT_DETECTED')
           suspicious_sqls="${suspicious_sqls//$'\n'/,}"
           suspicious_sqls="${suspicious_sqls//\.\//}"
           echo "::set-output name=sqls::$suspicious_sqls"
