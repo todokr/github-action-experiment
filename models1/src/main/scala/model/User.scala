@@ -1,1 +1,1 @@
-case class User(id: String, age: Int)
+case class User(id: String, age: Int, nickname: String)
