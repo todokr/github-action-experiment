@@ -34,7 +34,7 @@ jobs:
         id: detect-change-auto-generated-file
         uses: dorny/paths-filter@v2
         with:
-          list-files: 'shell'
+          list-files: 'csv'
           filters: |
             model:
               - '**/model/*.scala'
