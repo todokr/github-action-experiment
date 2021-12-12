@@ -19,7 +19,7 @@ jobs:
           pattern=$(IFS="|"; echo "${suspicious_keywords[*]}")
           migration_dir="./migration"
           suspicious_sqls=$(find ${migration_dir}/*.sql | xargs grep -li -E "${pattern}" || echo 'SUSPICIOUS_SQL_NOT_DETECTED')
-          suspicious_sqls="${suspicious_sqls//$'\n'/- \\n}"
+          suspicious_sqls="${suspicious_sqls//$'\n'/, }"
           echo "::set-output name=suspicious-sqls::$suspicious_sqls"
 
       # 自動生成コードの削除or変更を検知
