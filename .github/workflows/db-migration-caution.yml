@@ -29,6 +29,7 @@ jobs:
       # - 1件もヒットしない場合は 'SUSPICIOUS_SQL_NOT_DETECTED' の文字列
       - name: Grep Suspicious SQL
         id: grep-suspicious
+        if: steps.detect-db-migration.outputs.sql == 'true'
         run: |
           suspicious_keywords=("drop table" "drop column")
           pattern=$(IFS="|"; echo "${suspicious_keywords[*]}")
@@ -53,7 +54,8 @@ jobs:
       # コメントを再度行うかを判断するために、変更ファイルの一覧からmd5を計算
       - name: Calc MD5
         id: calc-md5
-        if: steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
+        if: steps.detect-db-migration.outputs.sql == 'true' &&
+            steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
             steps.detect-model-change.outputs.model == 'true'
         run: |
           md5=(`echo -n "${{steps.grep-suspicious.outputs.sqls}}${{steps.detect-model-change.outputs.model_files}}" | md5sum`)
@@ -75,7 +77,8 @@ jobs:
       # output: changed-model-list markdownにフォーマットした自動生成モデルファイルパス一覧
       - name: Format Comment Body
         id: format-body
-        if: steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
+        if: steps.detect-db-migration.outputs.sql == 'true' &&
+            steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
             steps.detect-model-change.outputs.model == 'true'
         run: |
           suspicious_sqls=${{steps.grep-suspicious.outputs.sqls}}
@@ -88,7 +91,8 @@ jobs:
       # コメントを追記
       - name: Write caution comment
         uses: peter-evans/create-or-update-comment@v1
-        if: steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
+        if: steps.detect-db-migration.outputs.sql == 'true' &&
+            steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
             steps.detect-model-change.outputs.model == 'true'&&
             steps.check-md5.outputs.comment-id == ''
         with:
