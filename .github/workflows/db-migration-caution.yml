@@ -10,10 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      
-      - name: Debug2
-        run: ls -la
-      
+
       # migration に変更が加えられた際に
       - name: Detect migration
         uses: dorny/paths-filter@v2
@@ -26,16 +23,16 @@ jobs:
 
       # 上記のファイルを対象にgrep
       - name: Grep something
-        id: grep-something
+        id: grep-suspicious
         run: |
-          suspicious_keywords=('drop table' 'drop column')
+          suspicious_keywords=("drop table" "drop column")
+          pattern=$(IFS="|"; echo "${suspicious_keywords[*]}")
           migration_dir="./migration"
-          drop_sqls=$(find ${migration_dir}/*.sql | xargs grep -li "${suspicious_keywords[@]/#/-e }" || true)
-          echo "::set-output name=drop-sqls::$drop_sqls"
-      
-      - name: Debug2
-        run: echo ${{ steps.grep-something.outputs.drop-sqls }}
+          suspicious_sqls=$(find ${migration_dir}/*.sql | xargs grep -li -E "${pattern}" || true)
+          echo "::set-output name=suspicious-sqls::$suspicious_sqls"
 
+      - name: Debug2
+        run: echo ${{ steps.grep-suspicious.outputs.suspicious-sqls }}
 
       # コメントがすでに存在しないか確認し
       # - name: Check existing caution comment
