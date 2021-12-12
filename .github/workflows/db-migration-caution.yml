@@ -11,6 +11,18 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      # 自動生成されたModelファイルの削除or変更を検知
+      # output: model 削除or変更が検知された際に 'true'
+      # output: model_files 削除or変更された自動生成ファイルパスのカンマ区切り文字列
+      - name: Detect DB migration
+        id: detect-db-migration
+        uses: dorny/paths-filter@v2
+        with:
+          list-files: 'shell'
+          filters: |
+            sql:
+              - 'migration/*.sql'
+
       # migration SQLを対象にキーワードでgrep
       # output: sqls
       # - ヒットした場合はSQLファイルパスのカンマ区切り文字列
@@ -20,8 +32,8 @@ jobs:
         run: |
           suspicious_keywords=("drop table" "drop column")
           pattern=$(IFS="|"; echo "${suspicious_keywords[*]}")
-          migration_dir="./migration"
-          suspicious_sqls=$(find ${migration_dir}/*.sql | xargs grep -li -E "${pattern}" || echo 'SUSPICIOUS_SQL_NOT_DETECTED')
+          echo ${{steps.detect-db-migration.ouputs.sql_files}}
+          suspicious_sqls=$(grep -li -E "${pattern}" ${{steps.detect-db-migration.ouputs.sql_files}} || echo 'SUSPICIOUS_SQL_NOT_DETECTED')
           suspicious_sqls="${suspicious_sqls//$'\n'/,}"
           suspicious_sqls="${suspicious_sqls//\.\//}"
           echo "::set-output name=sqls::$suspicious_sqls"
