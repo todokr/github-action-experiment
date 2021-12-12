@@ -13,7 +13,7 @@ jobs:
 
       # migration SQLを対象にキーワードでgrep
       # output: sqls
-      # - ヒットした場合はSQLファイルのカンマ区切り文字列
+      # - ヒットした場合はSQLファイルパスのカンマ区切り文字列
       # - 1件もヒットしない場合は 'SUSPICIOUS_SQL_NOT_DETECTED' の文字列
       - name: Grep Suspicious SQL
         id: grep-suspicious
@@ -23,6 +23,7 @@ jobs:
           migration_dir="./migration"
           suspicious_sqls=$(find ${migration_dir}/*.sql | xargs grep -li -E "${pattern}" || echo 'SUSPICIOUS_SQL_NOT_DETECTED')
           suspicious_sqls="${suspicious_sqls//$'\n'/,}"
+          suspicious_sqls="${suspicious_sqls//\.\//}"
           echo "::set-output name=sqls::$suspicious_sqls"
 
       # 自動生成コードの削除or変更を検知
@@ -43,6 +44,16 @@ jobs:
       #     issue-number: ${{ github.event.pull_request.number }}
       #     comment-author: 'github-actions[bot]'
       #     body-includes: Contains db migration!
+
+      # コメントを再度行うかを判断するために、変更ファイルの一覧からmd5を計算
+      - name: Calc MD5
+        id: calc-md5
+        if: steps.grep-suspicious.outputs.sqls != 'SUSPICIOUS_SQL_NOT_DETECTED' &&
+            steps.detect-change-auto-generated-file.outputs.model == 'true'
+        run: |
+          md5=$(echo -n "${{steps.grep-suspicious.outputs.sqls}}${{steps.detect-change-auto-generated-file.outputs.model_files}}" | md5sum)
+          echo $md5
+          echo "::set-output name=md5::$md5"
 
       # markdown用にフォーマット
       - name: Format Comment Body
